@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Four Ideas, Drawn: Physics, Chaos, Grammar, Modality</title>
+<style>
+:root{color-scheme:dark;--bg:#0e1a22;--panel:#14252f;--ink:#e8eef0;--mute:#93a8b2;--line:#2a4351;--cy:#5ce1e6;--gold:#ffd166;--rose:#ff8fab}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 Charter,"Iowan Old Style","Palatino Linotype",Georgia,serif}
+main{max-width:940px;margin:0 auto;padding:48px 20px 80px}
+h1{font-size:clamp(2rem,5vw,3rem);line-height:1.1;margin:0 0 10px;font-weight:600}
+.lede{color:var(--mute);max-width:62ch;margin:0 0 36px}
+section{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:22px;margin-bottom:34px}
+h2{font-size:1.3rem;margin:0 0 4px}
+p.c{color:var(--mute);font-size:.95rem;max-width:70ch;margin:0 0 14px}
+canvas,svg{display:block;max-width:100%;width:100%;height:auto;background:#0a131a;border:1px solid var(--line);border-radius:3px;touch-action:none}
+.row{display:flex;gap:14px;flex-wrap:wrap}.row>*{flex:1 1 260px;min-width:0}
+.ctl{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin:0 0 12px;font-size:.9rem;color:var(--mute)}
+label{display:flex;gap:8px;align-items:center}
+input[type=range]{accent-color:var(--cy)}
+button{font:inherit;font-size:.9rem;padding:4px 12px;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:3px;cursor:pointer}
+button[aria-pressed=true]{background:var(--cy);color:#06242a;border-color:var(--cy)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.n{font-size:.88rem;color:var(--mute);margin-top:8px;min-height:1.4em}
+.n b{color:var(--gold);font-weight:600}
+svg text{font-family:inherit}
+</style>
+</head>
+<body>
+<main>
+<h1>Four ideas, drawn</h1>
+<p class="lede">A quantum wave hits a wall, order dissolves into chaos, one sentence gets two grammars, and a handful of possible worlds test what “necessarily” means.</p>
+
+<section>
+<h2>Physics: a quantum wave packet meets a barrier</h2>
+<p class="c">The picture solves the time-dependent Schrödinger equation <i>iħ ∂ψ/∂t = −(ħ²/2m) ∂²ψ/∂x² + Vψ</i> live. Even when the particle’s energy is below the barrier it can tunnel through, and when it is above, part of it still bounces back. Neither outcome is a classical one.</p>
+<div class="ctl">
+<label>Barrier height <input id="vh" type="range" min="0" max="0.3" step="0.01" value="0.2"><output id="vho"></output></label>
+<label>Momentum <input id="k0" type="range" min="0.3" max="0.9" step="0.05" value="0.55"><output id="k0o"></output></label>
+<button id="rs">Restart</button><button id="ps" aria-pressed="false">Pause</button>
+</div>
+<canvas id="qm" width="880" height="300"></canvas>
+<div class="n" id="qn"></div>
+</section>
+
+<section>
+<h2>Chaos: the logistic map and its road to disorder</h2>
+<p class="c">Iterating <i>x → r·x(1−x)</i> settles to one value, then splits into 2, 4, 8 … cycles, each split arriving faster by Feigenbaum’s constant δ ≈ 4.669, until chaos sets in near r ≈ 3.57. Move across the diagram to pick r and watch the cobweb on the right follow the orbit.</p>
+<div class="row">
+<canvas id="bf" width="560" height="340" style="flex-grow:1.6"></canvas>
+<canvas id="cw" width="340" height="340"></canvas>
+</div>
+<div class="n" id="bn"></div>
+</section>
+
+<section>
+<h2>Linguistics: one sentence, two syntax trees</h2>
+<p class="c">“I saw the man with the telescope” has the same words in both readings, but the phrase <b style="color:var(--gold)">with the telescope</b> attaches in a different place in the tree. That choice is what decides who holds the telescope.</p>
+<div class="ctl" id="tbtn" role="group" aria-label="Choose a reading"></div>
+<svg id="tree" viewBox="0 0 880 330" role="img" aria-label="Syntax tree"></svg>
+<div class="n" id="tn"></div>
+</section>
+
+<section>
+<h2>Philosophy: possible worlds and what “necessarily” means</h2>
+<p class="c">In Kripke semantics, <i>□p</i> (“necessarily p”) is true at a world when p holds at every world accessible from it, and <i>◇p</i> (“possibly p”) when p holds at some accessible world. Click a world to flip whether p is true there. Then add conditions on accessibility and see which logic you have built.</p>
+<div class="ctl">
+<label><input type="checkbox" id="cT"> reflexive (T)</label>
+<label><input type="checkbox" id="cB"> symmetric (B)</label>
+<label><input type="checkbox" id="c4"> transitive (4)</label>
+<b id="lg" style="color:var(--gold)"></b>
+</div>
+<svg id="kr" viewBox="0 0 880 340" role="img" aria-label="Kripke frame"></svg>
+<div class="n" id="kn"></div>
+</section>
+</main>
+
+<script>
+const $=id=>document.getElementById(id),NS='http://www.w3.org/2000/svg';
+function el(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e;}
+
+/* ---------- 1. Schrödinger ---------- */
+(function(){
+  const cv=$('qm'),g=cv.getContext('2d'),W=cv.width,H=cv.height;
+  const N=640,dt=0.25,BX=360,BW=12;
+  let R,I,V,run=true,A2=1;
+  function init(){
+    const vh=+$('vh').value,k0=+$('k0').value,x0=130,s=22;
+    $('vho').textContent=vh.toFixed(2)+' (E = '+(k0*k0/2).toFixed(3)+')';$('k0o').textContent=k0.toFixed(2);
+    R=new Float64Array(N);I=new Float64Array(N);V=new Float64Array(N);
+    const A=Math.pow(2*Math.PI*s*s,-.25);A2=A*A;
+    for(let i=0;i<N;i++){const e=A*Math.exp(-((i-x0)**2)/(4*s*s));R[i]=e*Math.cos(k0*i);I[i]=e*Math.sin(k0*i);
+      V[i]=(i>=BX-BW/2&&i<BX+BW/2)?vh:0;}
+  }
+  function step(){
+    for(let i=1;i<N-1;i++)R[i]+=dt*(-.5*(I[i+1]-2*I[i]+I[i-1])+V[i]*I[i]);
+    for(let i=1;i<N-1;i++)I[i]-=dt*(-.5*(R[i+1]-2*R[i]+R[i-1])+V[i]*R[i]);
+    for(let i=0;i<50;i++){const f=1-.03*((50-i)/50)**2;R[i]*=f;I[i]*=f;R[N-1-i]*=f;I[N-1-i]*=f;}
+  }
+  function draw(){
+    g.clearRect(0,0,W,H);const sx=W/N,base=H-24,sc=(H*.62)/A2;
+    const vh=+$('vh').value;
+    g.fillStyle='rgba(255,209,102,.28)';g.fillRect((BX-BW/2)*sx,base-vh*H*2.2,BW*sx,vh*H*2.2+1);
+    g.strokeStyle='rgba(255,209,102,.8)';g.strokeRect((BX-BW/2)*sx,base-vh*H*2.2,BW*sx,vh*H*2.2);
+    let L=0,Rr=0;g.beginPath();g.moveTo(0,base);
+    for(let i=0;i<N;i++){const d=R[i]*R[i]+I[i]*I[i];if(i<BX-BW/2)L+=d;else if(i>=BX+BW/2)Rr+=d;g.lineTo(i*sx,base-d*sc);}
+    g.lineTo(W,base);g.closePath();g.fillStyle='rgba(92,225,230,.35)';g.fill();g.strokeStyle='#5ce1e6';g.lineWidth=1.5;g.stroke();
+    g.strokeStyle='rgba(147,168,178,.5)';g.beginPath();g.moveTo(0,base);g.lineTo(W,base);g.stroke();
+    g.fillStyle='#93a8b2';g.font='13px sans-serif';g.fillText('|ψ(x)|²  (probability density)',10,18);
+    const T=L+Rr||1;
+    $('qn').innerHTML='Probability left of barrier: <b>'+(100*L/T).toFixed(0)+'%</b> · right of barrier: <b>'+(100*Rr/T).toFixed(0)+'%</b>';
+  }
+  function loop(){if(run)for(let i=0;i<12;i++)step();draw();requestAnimationFrame(loop);}
+  $('rs').onclick=init;$('vh').oninput=init;$('k0').oninput=init;
+  $('ps').onclick=e=>{run=!run;e.target.textContent=run?'Pause':'Resume';e.target.setAttribute('aria-pressed',!run);};
+  init();loop();
+})();
+
+/* ---------- 2. Logistic map ---------- */
+(function(){
+  const bf=$('bf'),bg=bf.getContext('2d'),cw=$('cw'),cg=cw.getContext('2d');
+  const BW=bf.width,BH=bf.height,r0=2.5,r1=4,P=[34,10,10,26];
+  const X=r=>P[0]+(r-r0)/(r1-r0)*(BW-P[0]-P[2]),Y=x=>BH-P[3]-x*(BH-P[1]-P[3]);
+  const bg0=document.createElement('canvas');bg0.width=BW;bg0.height=BH;
+  (function(){
+    const c=bg0.getContext('2d');c.fillStyle='rgba(92,225,230,.22)';
+    for(let px=P[0];px<BW-P[2];px++){const r=r0+(px-P[0])/(BW-P[0]-P[2])*(r1-r0);let x=.5;
+      for(let i=0;i<300;i++)x=r*x*(1-x);
+      for(let i=0;i<160;i++){x=r*x*(1-x);c.fillRect(px,Y(x),1,1.2);}}
+    c.fillStyle='#93a8b2';c.font='12px sans-serif';
+    [2.5,3,3.5,4].forEach(r=>c.fillText(r,X(r)-8,BH-8));c.fillText('r',BW-14,BH-8);c.fillText('x',8,18);
+    c.strokeStyle='rgba(255,143,171,.6)';c.setLineDash([3,4]);
+    [3,1+Math.sqrt(6),3.5699].forEach(r=>{c.beginPath();c.moveTo(X(r),P[1]);c.lineTo(X(r),BH-P[3]);c.stroke();});
+  })();
+  function cob(r){
+    const S=cw.width,m=24,u=v=>m+v*(S-2*m),w=v=>S-m-v*(S-2*m);
+    cg.clearRect(0,0,S,S);
+    cg.strokeStyle='#2a4351';cg.strokeRect(m,m,S-2*m,S-2*m);
+    cg.strokeStyle='#93a8b2';cg.beginPath();cg.moveTo(u(0),w(0));cg.lineTo(u(1),w(1));cg.stroke();
+    cg.strokeStyle='#ffd166';cg.lineWidth=2;cg.beginPath();
+    for(let i=0;i<=200;i++){const x=i/200,y=r*x*(1-x);i?cg.lineTo(u(x),w(y)):cg.moveTo(u(x),w(y));}cg.stroke();
+    cg.lineWidth=1;cg.strokeStyle='#ff8fab';cg.beginPath();let x=.2;cg.moveTo(u(x),w(0));
+    for(let i=0;i<80;i++){const y=r*x*(1-x);cg.lineTo(u(x),w(y));cg.lineTo(u(y),w(y));x=y;}cg.stroke();
+    cg.fillStyle='#93a8b2';cg.font='12px sans-serif';cg.fillText('x → r x (1 − x)',m+4,m-8);
+  }
+  function setR(r){
+    bg.clearRect(0,0,BW,BH);bg.drawImage(bg0,0,0);
+    bg.strokeStyle='#ff8fab';bg.lineWidth=1.5;bg.beginPath();bg.moveTo(X(r),P[1]);bg.lineTo(X(r),BH-P[3]);bg.stroke();
+    cob(r);
+    let x=.5;for(let i=0;i<2000;i++)x=r*x*(1-x);
+    const seen=[];for(let i=0;i<256;i++){x=r*x*(1-x);if(!seen.some(s=>Math.abs(s-x)<1e-5))seen.push(x);}
+    const lam=(()=>{let y=.5,s=0;for(let i=0;i<500;i++)y=r*y*(1-y);for(let i=0;i<5000;i++){y=r*y*(1-y);s+=Math.log(Math.abs(r*(1-2*y))+1e-12);}return s/5000;})();
+    $('bn').innerHTML='r = <b>'+r.toFixed(4)+'</b> · '+(seen.length<64?'settles into a cycle of period <b>'+seen.length+'</b>':'<b>chaotic</b> (no repeating cycle)')+' · Lyapunov exponent λ = <b>'+lam.toFixed(3)+'</b>'+(lam>0?' (nearby orbits diverge)':' (nearby orbits converge)');
+  }
+  function ev(e){const rc=bf.getBoundingClientRect(),f=(e.clientX-rc.left)/rc.width*BW;
+    setR(Math.max(r0,Math.min(r1,r0+(f-P[0])/(BW-P[0]-P[2])*(r1-r0))));}
+  let d=false;bf.onpointerdown=e=>{d=true;bf.setPointerCapture(e.pointerId);ev(e)};bf.onpointerup=()=>d=false;
+  bf.onpointermove=e=>{if(d||e.pointerType==='mouse')ev(e)};
+  setR(3.83);
+})();
+
+/* ---------- 3. Syntax trees ---------- */
+(function(){
+  const NP=(d,n)=>['NP',['Det',d],['N',n]];
+  const trees={
+    'I used a telescope to see him':['S',['NP',['Pro','I']],['VP',['VP',['V','saw']],['VP',['NP',['Det','the'],['N','man']]],['PP',['P','with'],NP('the','telescope')]]],
+    'The man had the telescope':['S',['NP',['Pro','I']],['VP',['V','saw'],['NP',['NP',['Det','the'],['N','man']],['PP',['P','with'],NP('the','telescope')]]]]
+  };
+  trees['I used a telescope to see him']=['S',['NP',['Pro','I']],['VP',['VP',['V','saw'],NP('the','man')],['PP',['P','with'],NP('the','telescope')]]];
+  const notes={
+    'I used a telescope to see him':'The PP attaches to the <b>verb phrase</b>: it modifies the act of seeing.',
+    'The man had the telescope':'The PP attaches to the <b>noun phrase</b>: it describes which man.'};
+  const svg=$('tree');let leaf,pos;
+  function lay(n,d){
+    if(typeof n[1]==='string'){const o={l:n[0],w:n[1],d,x:leaf++,pre:true};return o;}
+    const ch=n.slice(1).map(c=>lay(c,d+1));
+    return {l:n[0],d,c:ch,x:ch.reduce((s,c)=>s+c.x,0)/ch.length};
+  }
+  function depth(o){return o.c?Math.max(...o.c.map(depth)):o.d;}
+  function draw(key){
+    svg.innerHTML='';leaf=0;const t=lay(trees[key],0),D=depth(t),sx=880/(leaf+.4),sy=(330-80)/(D+.6);
+    const X=o=>(o.x+.7)*sx,Y=o=>28+o.d*sy;
+    (function go(o,hi){
+      const h=hi||o.l==='PP',col=h?'#ffd166':'#5ce1e6';
+      if(o.c)o.c.forEach(c=>{el('line',{x1:X(o),y1:Y(o)+5,x2:X(c),y2:Y(c)-12,stroke:(h||c.l==='PP')?'#ffd166':'#2f5a6b','stroke-width':1.6},svg);});
+      if(o.pre){el('line',{x1:X(o),y1:Y(o)+5,x2:X(o),y2:300-14,stroke:h?'#ffd166':'#2f5a6b','stroke-width':1.2,'stroke-dasharray':'3 3'},svg);
+        const w=el('text',{x:X(o),y:306,'text-anchor':'middle',fill:h?'#ffd166':'#e8eef0','font-size':17,'font-style':'italic'},svg);w.textContent=o.w;}
+      const t=el('text',{x:X(o),y:Y(o),'text-anchor':'middle',fill:col,'font-size':15,'font-weight':600},svg);t.textContent=o.l;
+      if(o.c)o.c.forEach(c=>go(c,h));
+    })(t,false);
+    $('tn').innerHTML=notes[key];
+  }
+  const box=$('tbtn');
+  Object.keys(trees).forEach((k,i)=>{const b=document.createElement('button');b.textContent=k;b.setAttribute('aria-pressed',i===0);
+    b.onclick=()=>{[...box.children].forEach(x=>x.setAttribute('aria-pressed',x===b));draw(k)};box.appendChild(b);});
+  draw(Object.keys(trees)[0]);
+})();
+
+/* ---------- 4. Kripke frame ---------- */
+(function(){
+  const svg=$('kr'),n=5,cx=440,cy=175,rad=120,pos=[];
+  for(let i=0;i<n;i++){const a=-Math.PI/2+i*2*Math.PI/n;pos.push([cx+rad*1.55*Math.cos(a),cy+rad*Math.sin(a)*1.15]);}
+  const base=[[0,1],[1,2],[2,3],[3,1],[0,4],[4,2]];
+  let p=[true,false,true,false,false];
+  const names={'':'K','T':'T','B':'KB','4':'K4','TB':'B','T4':'S4','B4':'K4B','TB4':'S5'};
+  el('defs',{},svg).innerHTML='<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#93a8b2"/></marker>';
+  function rel(){
+    const a=Array.from({length:n},()=>Array(n).fill(false));base.forEach(([i,j])=>a[i][j]=true);
+    if($('cT').checked)for(let i=0;i<n;i++)a[i][i]=true;
+    if($('cB').checked)for(let i=0;i<n;i++)for(let j=0;j<n;j++)if(a[i][j])a[j][i]=true;
+    if($('c4').checked)for(let k=0;k<n;k++)for(let i=0;i<n;i++)for(let j=0;j<n;j++)if(a[i][k]&&a[k][j])a[i][j]=true;
+    return a;
+  }
+  function draw(){
+    const a=rel(),keep=svg.firstChild;while(svg.lastChild!==keep)svg.removeChild(svg.lastChild);
+    for(let i=0;i<n;i++)for(let j=0;j<n;j++)if(a[i][j]){
+      const [x1,y1]=pos[i],[x2,y2]=pos[j];
+      if(i===j){const ux=(x1-cx)/Math.hypot(x1-cx,y1-cy||1),uy=(y1-cy)/Math.hypot(x1-cx,y1-cy||1);
+        const ox=x1+ux*26,oy=y1+uy*26;el('circle',{cx:ox,cy:oy,r:14,fill:'none',stroke:'#93a8b2','stroke-width':1.5,'marker-end':'none'},svg);continue;}
+      const dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy),nx=-dy/L,ny=dx/L,ux=dx/L,uy=dy/L,o=16;
+      const sx=x1+ux*28,sy=y1+uy*28,ex=x2-ux*30,ey=y2-uy*30,mx=(x1+x2)/2+nx*o*1.6,my=(y1+y2)/2+ny*o*1.6;
+      el('path',{d:`M${sx} ${sy}Q${mx} ${my} ${ex} ${ey}`,fill:'none',stroke:'#93a8b2','stroke-width':1.5,'marker-end':'url(#ar)'},svg);
+    }
+    const fails=[];
+    for(let i=0;i<n;i++){
+      const s=[];for(let j=0;j<n;j++)if(a[i][j])s.push(j);
+      const box=s.every(j=>p[j]),dia=s.some(j=>p[j]);
+      if(box&&!p[i])fails.push('w'+(i+1));
+      const gEl=el('g',{style:'cursor:pointer',tabindex:0,role:'button','aria-label':'World '+(i+1)+', p is '+p[i]},svg);
+      el('circle',{cx:pos[i][0],cy:pos[i][1],r:25,fill:p[i]?'#0f4a52':'#0a131a',stroke:p[i]?'#5ce1e6':'#ff8fab','stroke-width':2.2},gEl);
+      const t=el('text',{x:pos[i][0],y:pos[i][1]+5,'text-anchor':'middle',fill:'#e8eef0','font-size':15},gEl);t.textContent='w'+(i+1)+(p[i]?' p':' ¬p');
+      const m=el('text',{x:pos[i][0],y:pos[i][1]+(pos[i][1]>cy?50:-36),'text-anchor':'middle',fill:'#ffd166','font-size':14},svg);
+      m.textContent=(box?'□p':'¬□p')+'  '+(dia?'◇p':'¬◇p');
+      const tog=()=>{p[i]=!p[i];draw();};gEl.onclick=tog;gEl.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();tog();}};
+    }
+    const key=($('cT').checked?'T':'')+($('cB').checked?'B':'')+($('c4').checked?'4':'');
+    $('lg').textContent='Frame logic: '+names[key];
+    $('kn').innerHTML=fails.length?'The axiom T, “□p → p”, <b>fails</b> at '+fails.join(', ')+': p is necessary there yet false. Tick “reflexive” and it can never fail.':'No world here breaks “□p → p”. Without reflexivity, flip some worlds and it can fail.';
+  }
+  ['cT','cB','c4'].forEach(i=>$(i).onchange=draw);draw();
+})();
+</script>
+</body>
+</html>
